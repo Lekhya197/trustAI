@@ -4,27 +4,34 @@ import re
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-# Custom vectorizer loader to handle IDF weights
+# Custom vectorizer loader that works reliably
+@st.cache_resource
 def load_tfidf():
-    vectorizer = TfidfVectorizer(decode_error="replace")
-    vec_params = joblib.load("tfidf.joblib")
-    vectorizer.__dict__.update(vec_params)
-    return vectorizer
+    try:
+        # Try loading the full vectorizer first
+        return joblib.load("tfidf.joblib")
+    except:
+        # Fallback: Reconstruct vectorizer from components
+        vec_params = joblib.load("tfidf.joblib")
+        vectorizer = TfidfVectorizer()
+        vectorizer.vocabulary_ = vec_params['vocabulary_']
+        vectorizer.idf_ = vec_params['idf_']
+        if 'stop_words_' in vec_params:
+            vectorizer.stop_words_ = vec_params['stop_words_']
+        return vectorizer
 
-# Cache resources
 @st.cache_resource
 def load_model():
-    return joblib.load("model.joblib"), load_tfidf()
+    return joblib.load("model.joblib")
 
-model, tfidf = load_model()
+model = load_model()
+tfidf = load_tfidf()
 
-# Text cleaning
 def clean_text(text):
     text = str(text).lower()
     text = re.sub(r'[^a-z0-9\s]', '', text)
     return text
 
-# Streamlit UI
 st.title("🔍 Fake Review Detector")
 review = st.text_area("Paste a review:", height=150)
 analyze_clicked = st.button("Analyze")
@@ -35,9 +42,8 @@ if analyze_clicked:
             cleaned = clean_text(review)
             X = tfidf.transform([cleaned])
             
-            # Ensure vectorizer is fitted
-            if not hasattr(tfidf, 'idf_'):
-                st.error("Vectorizer not properly initialized!")
+            if not hasattr(tfidf, 'vocabulary_'):
+                st.error("Vectorizer not properly loaded!")
             else:
                 is_fake = model.predict(X)[0]
                 proba = model.predict_proba(X)[0][1]
@@ -48,6 +54,6 @@ if analyze_clicked:
                 st.progress(int(proba * 100))
                 
         except Exception as e:
-            st.error(f"Error: {str(e)}")
+            st.error(f"Analysis failed: {str(e)}")
     else:
         st.warning("Please enter a review first!")
