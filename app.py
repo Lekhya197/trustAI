@@ -1,4 +1,6 @@
 import streamlit as st
+st.set_page_config(page_title="Fake Review Detector", page_icon="🕵️‍♂️")
+
 import joblib
 import re
 
@@ -8,7 +10,7 @@ def load_tfidf():
     try:
         return joblib.load("tfidf.joblib")
     except Exception as e:
-        st.error(f"Failed to load vectorizer: {e}")
+        st.error(f"❌ Failed to load vectorizer: {e}")
         return None
 
 @st.cache_resource
@@ -16,7 +18,7 @@ def load_model():
     try:
         return joblib.load("model.joblib")
     except Exception as e:
-        st.error(f"Failed to load model: {e}")
+        st.error(f"❌ Failed to load model: {e}")
         return None
 
 # Preprocess input review
@@ -30,7 +32,6 @@ model = load_model()
 tfidf = load_tfidf()
 
 # UI
-st.set_page_config(page_title="Fake Review Detector", page_icon="🕵️‍♂️")
 st.title("🕵️‍♂️ Fake Review Detector")
 st.markdown("Paste a customer review below and click **Analyze** to check if it’s likely to be fake or genuine.")
 
@@ -42,7 +43,7 @@ if analyze_clicked:
     if not review.strip():
         st.warning("⚠️ Please enter a review first!")
     elif not tfidf or not model:
-        st.error("Model or vectorizer is not loaded properly. Please check your files.")
+        st.error("❌ Model or vectorizer is not loaded properly. Please check your files.")
     else:
         try:
             cleaned = clean_text(review)
